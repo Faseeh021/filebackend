@@ -2,11 +2,11 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files (including clean package-lock.json without pdf-parse)
 COPY package*.json ./
 
-# Clean install without cache to avoid pdf-parse issues
-RUN rm -rf node_modules package-lock.json && npm install --no-optional
+# Install dependencies using the clean package-lock.json
+RUN npm ci --no-optional
 
 # Copy application code
 COPY . .
