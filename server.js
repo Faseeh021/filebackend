@@ -9,6 +9,7 @@ import requirementsRoutes from './routes/requirements.js'
 import { initDB } from './db/init.js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import { db } from './db/config.js'
+import { createTables } from './db/createTables.js'
 
 dotenv.config()
 
@@ -49,24 +50,28 @@ app.get('/api/health', (req, res) => {
 // Initialize database on startup
 async function startServer() {
   try {
-    // Try to run migrations if they exist, otherwise just initialize data
     console.log('Checking database...')
+    
+    // Create tables first (if they don't exist)
     try {
-      const migrationsFolder = join(__dirname, 'drizzle')
-      const fs = await import('fs')
-      if (fs.existsSync(migrationsFolder)) {
-        console.log('Running database migrations...')
-        await migrate(db, { migrationsFolder })
-        console.log('Migrations completed successfully')
-      } else {
-        console.log('No migrations folder found, skipping migrations')
+      await createTables()
+    } catch (createError) {
+      console.warn('Table creation warning:', createError.message)
+      // Try migrations as fallback
+      try {
+        const migrationsFolder = join(__dirname, 'drizzle')
+        const fs = await import('fs')
+        if (fs.existsSync(migrationsFolder)) {
+          console.log('Trying database migrations instead...')
+          await migrate(db, { migrationsFolder })
+          console.log('Migrations completed successfully')
+        }
+      } catch (migrationError) {
+        console.warn('Migration warning:', migrationError.message)
       }
-    } catch (migrationError) {
-      console.warn('Migration warning:', migrationError.message)
-      console.log('Continuing with database initialization...')
     }
     
-    // Initialize data
+    // Initialize data (seed requirements, etc.)
     await initDB()
     console.log('Database initialized successfully')
     
