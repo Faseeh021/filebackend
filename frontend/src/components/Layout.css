@@ -1,0 +1,23 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: #ffffff;
+}
+
+.main-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-left: 280px;
+  transition: margin-left 0.3s ease;
+}
+
+.main-container.sidebar-closed {
+  margin-left: 0;
+}
+
+.main-content {
+  flex: 1;
+  padding: 32px;
+  background-color: #ffffff;
+}

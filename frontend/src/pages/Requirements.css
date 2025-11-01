@@ -1,0 +1,84 @@
+.requirements-page {
+  max-width: 1400px;
+}
+
+.requirements-header {
+  margin-bottom: 32px;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.page-subtitle {
+  font-size: 16px;
+  color: #666;
+}
+
+.requirements-loading {
+  text-align: center;
+  padding: 48px;
+  font-size: 18px;
+  color: #666;
+}
+
+.requirements-table-container {
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.requirements-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.requirements-table thead {
+  background-color: #ffffff;
+}
+
+.requirements-table th {
+  padding: 16px 24px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.requirements-table th.col-description {
+  background-color: #e8f5e9;
+}
+
+.requirements-table tbody tr {
+  border-bottom: 1px solid #e0e0e0;
+  transition: background-color 0.2s ease;
+}
+
+.requirements-table tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
+.requirements-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.requirements-table td {
+  padding: 16px 24px;
+  font-size: 14px;
+  color: #333;
+}
+
+.col-no {
+  width: 80px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.col-description {
+  width: auto;
+}
