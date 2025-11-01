@@ -30,19 +30,33 @@ const checkApiHealth = async (url, retries = 3) => {
   for (let i = 0; i < retries; i++) {
     try {
       const response = await axios.get(`${url}/api/health`, {
-        timeout: 5000,
-        validateStatus: (status) => status < 500 // Accept 4xx but not 5xx
+        timeout: 10000, // Increased timeout for sleeping services
+        validateStatus: (status) => status < 500, // Accept 4xx but not 5xx
+        headers: {
+          'Accept': 'application/json'
+        }
       })
       
       if (response.data && response.data.status === 'ok') {
         return { success: true, url }
       }
     } catch (error) {
+      // If it's a network/DNS error and we have retries left, continue
+      if (error.code === 'ERR_NAME_NOT_RESOLVED' || error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED') {
+        if (i === retries - 1) {
+          // Last retry failed - service might be sleeping
+          return { success: false, error, sleeping: true }
+        }
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1)))
+        continue
+      }
+      
+      // For other errors (like 404, 500, etc), return immediately
       if (i === retries - 1) {
-        // Last retry failed
         return { success: false, error }
       }
-      // Wait before retry (exponential backoff)
+      
       await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)))
     }
   }
@@ -51,36 +65,40 @@ const checkApiHealth = async (url, retries = 3) => {
 
 // Auto-detect API URL
 const detectApiUrl = async () => {
-  // Try environment variable first
-  if (import.meta.env.VITE_API_URL) {
-    const health = await checkApiHealth(import.meta.env.VITE_API_URL, 2)
-    if (health.success) {
-      return import.meta.env.VITE_API_URL
-    }
-  }
-  
-  // Try common Railway URL patterns (these may change, so set VITE_API_URL in Vercel)
+  // Try common Railway URL patterns (environment variable is handled in getApiUrlWithFallback)
   const possibleUrls = [
+    'https://filebackend-production-b095.up.railway.app', // Current known URL
     'https://filebackend-production.up.railway.app',
-    'https://filebackend-production-b095.up.railway.app',
     // Add more patterns if you have other Railway URLs
-  ].filter(Boolean)
+  ]
   
+  // Try each URL with a quick health check
   for (const url of possibleUrls) {
     try {
-      const health = await checkApiHealth(url, 2)
+      // Use a race to timeout quickly if service is sleeping
+      const health = await Promise.race([
+        checkApiHealth(url, 1),
+        new Promise((resolve) => setTimeout(() => resolve({ success: false, timeout: true }), 5000))
+      ])
+      
       if (health.success) {
         console.log('Auto-detected API URL:', url)
         return url
       }
+      
+      if (health.timeout) {
+        console.warn(`Health check timed out for ${url} (service may be sleeping)`)
+      }
     } catch (error) {
+      console.warn(`Failed to connect to ${url}:`, error.message)
       // Continue to next URL
       continue
     }
   }
   
-  console.warn('Could not auto-detect API URL. Please set VITE_API_URL environment variable.')
-  return null
+  // Always return a fallback URL (service might be sleeping, but URL is correct)
+  console.warn('Could not verify API URL via health check. Using known Railway URL as fallback.')
+  return 'https://filebackend-production-b095.up.railway.app'
 }
 
 // Get or detect API URL
@@ -89,17 +107,42 @@ export const getApiUrlWithFallback = async () => {
     return cachedApiUrl
   }
   
+  // Priority 1: Use environment variable if set (always trust it if present)
+  if (import.meta.env.VITE_API_URL) {
+    cachedApiUrl = import.meta.env.VITE_API_URL
+    apiUrlChecked = true
+    console.log('Using API URL from environment variable:', cachedApiUrl)
+    return cachedApiUrl
+  }
+  
+  // Priority 2: Try to auto-detect with health check
   let apiUrl = getApiUrl()
   
-  // If no URL or URL fails health check, try to detect
-  if (!apiUrl || !(await checkApiHealth(apiUrl, 1)).success) {
-    console.warn('API URL not available, attempting auto-detection...')
+  if (!apiUrl) {
+    console.log('No API URL found, attempting auto-detection...')
     apiUrl = await detectApiUrl()
-    
-    if (!apiUrl) {
-      // Fallback to environment URL or localhost
-      apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+  } else {
+    // Quick health check (non-blocking - if it fails, still use the URL)
+    try {
+      const health = await Promise.race([
+        checkApiHealth(apiUrl, 1),
+        new Promise((resolve) => setTimeout(() => resolve({ success: false, timeout: true }), 3000))
+      ])
+      
+      if (!health.success && !health.timeout) {
+        console.warn('Configured API URL failed health check, attempting auto-detection...')
+        apiUrl = await detectApiUrl()
+      }
+    } catch (error) {
+      console.warn('Health check error (will use URL anyway):', error.message)
+      // Continue with the URL even if health check fails
     }
+  }
+  
+  // Final fallback - always return a URL
+  if (!apiUrl) {
+    apiUrl = 'https://filebackend-production-b095.up.railway.app'
+    console.warn('Using default fallback API URL:', apiUrl)
   }
   
   cachedApiUrl = apiUrl
