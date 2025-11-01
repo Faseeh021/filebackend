@@ -21,10 +21,7 @@ const Sidebar = ({ isOpen, currentPath }) => {
       <div className="sidebar-header">
         <div className="logo">
           <img src="/logo.jpg" alt="Logo" className="logo-icon" />
-          <div className="logo-text">
-            <div className="logo-text-line">File</div>
-            <div className="logo-text-line">Management</div>
-          </div>
+          <span className="logo-text">File Management</span>
         </div>
       </div>
 
