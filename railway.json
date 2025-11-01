@@ -3,7 +3,8 @@
   "$comment": "Railway config for filebackend - backend files are in backend/ subdirectory",
   "build": {
     "builder": "DOCKERFILE",
-    "dockerfilePath": "backend/Dockerfile"
+    "dockerfilePath": "backend/Dockerfile",
+    "buildContext": "."
   },
   "deploy": {
     "restartPolicyType": "ON_FAILURE",
