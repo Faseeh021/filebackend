@@ -5,7 +5,15 @@ import * as schema from './schema.js'
 
 dotenv.config()
 
-const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:faseeh565@localhost:5432/project'
+// Railway automatically provides DATABASE_URL when PostgreSQL service is linked
+// In production, DATABASE_URL should always be provided by Railway
+const connectionString = process.env.DATABASE_URL
+
+if (!connectionString) {
+  console.error('✗ ERROR: DATABASE_URL environment variable is not set!')
+  console.error('Please ensure PostgreSQL service is linked in Railway.')
+  throw new Error('DATABASE_URL is required but not provided')
+}
 
 console.log('Database connection string:', connectionString.replace(/:[^:@]+@/, ':***@'))
 
