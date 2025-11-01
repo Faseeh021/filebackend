@@ -1,5 +1,4 @@
 import { client } from './config.js'
-import { sql } from 'drizzle-orm'
 
 export async function createTables() {
   try {
