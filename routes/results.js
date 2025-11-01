@@ -6,7 +6,6 @@ import PDFDocument from 'pdfkit'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import fs from 'fs'
-import { PDFParse } from 'pdf-parse'
 
 const router = express.Router()
 
