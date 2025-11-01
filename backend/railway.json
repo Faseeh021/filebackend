@@ -1,8 +1,8 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
+  "$comment": "Railway will auto-detect Node.js. If issues persist, use Dockerfile.",
   "build": {
-    "builder": "NIXPACKS",
-    "buildCommand": "npm install"
+    "builder": "NIXPACKS"
   },
   "deploy": {
     "startCommand": "npm start",
