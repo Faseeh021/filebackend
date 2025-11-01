@@ -30,7 +30,11 @@ const Results = () => {
 
   const handleDownload = async (id, filename) => {
     try {
-      const response = await axios.get(`${API_URL}/api/results/${id}/download`, {
+      const downloadUrl = `${API_URL}/api/results/${id}/download`
+      console.log('Downloading from:', downloadUrl)
+      console.log('API_URL:', API_URL)
+      
+      const response = await axios.get(downloadUrl, {
         responseType: 'blob',
       })
       
@@ -48,7 +52,15 @@ const Results = () => {
       window.URL.revokeObjectURL(url)
     } catch (error) {
       console.error('Download error:', error)
-      alert('Failed to download report. Please try again.')
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url,
+        apiUrl: API_URL
+      })
+      const errorMessage = error.response?.data?.message || error.message || 'Unknown error'
+      alert(`Failed to download report: ${errorMessage}. Please check the console for details.`)
     }
   }
 
