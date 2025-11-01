@@ -1,9 +1,9 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
-  "$comment": "Using Dockerfile for clean builds without cached dependencies",
+  "$comment": "Using Dockerfile for clean builds - explicitly disable Nixpacks",
   "build": {
     "builder": "DOCKERFILE",
-    "dockerfilePath": "Dockerfile"
+    "dockerfilePath": "./Dockerfile"
   },
   "deploy": {
     "restartPolicyType": "ON_FAILURE",
