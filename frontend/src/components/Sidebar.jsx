@@ -20,7 +20,7 @@ const Sidebar = ({ isOpen, currentPath }) => {
     <aside className={`sidebar ${isOpen ? 'open' : 'closed'}`}>
       <div className="sidebar-header">
         <div className="logo">
-          <img src="/logo.svg" alt="Logo" className="logo-icon" />
+          <img src="/logo.jpg" alt="Logo" className="logo-icon" />
           <span className="logo-text">File Management</span>
         </div>
       </div>
