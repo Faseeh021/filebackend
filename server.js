@@ -54,9 +54,12 @@ async function startServer() {
     
     // Create tables first (if they don't exist)
     try {
+      console.log('Attempting to create database tables...')
       await createTables()
+      console.log('✓ Database tables created or verified')
     } catch (createError) {
-      console.warn('Table creation warning:', createError.message)
+      console.error('✗ Table creation error:', createError.message)
+      console.error('Error details:', createError)
       // Try migrations as fallback
       try {
         const migrationsFolder = join(__dirname, 'drizzle')
@@ -65,9 +68,11 @@ async function startServer() {
           console.log('Trying database migrations instead...')
           await migrate(db, { migrationsFolder })
           console.log('Migrations completed successfully')
+        } else {
+          console.error('No migrations folder found and table creation failed')
         }
       } catch (migrationError) {
-        console.warn('Migration warning:', migrationError.message)
+        console.error('Migration error:', migrationError.message)
       }
     }
     
