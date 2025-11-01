@@ -65,10 +65,13 @@ router.post('/', upload.single('file'), async (req, res) => {
 
     const { filename, originalname, path, size, mimetype } = req.file
 
+    // Store relative path (just filename) to avoid issues with absolute paths on different environments
+    const relativePath = filename // Just the filename, stored in uploads directory
+    
     // Insert upload record into database using raw SQL
     const [uploadRecord] = await client`
       INSERT INTO uploads (filename, original_filename, file_path, file_size, file_type)
-      VALUES (${filename}, ${originalname}, ${path}, ${size}, ${mimetype})
+      VALUES (${filename}, ${originalname}, ${relativePath}, ${size}, ${mimetype})
       RETURNING id, filename, original_filename as "originalFilename", file_path as "filePath", 
                  file_size as "fileSize", file_type as "fileType", uploaded_at as "uploadedAt", user_id as "userId"
     `

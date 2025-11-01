@@ -6,7 +6,6 @@ import PDFDocument from 'pdfkit'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import fs from 'fs'
-import { PDFParse } from 'pdf-parse'
 
 const router = express.Router()
 
@@ -89,33 +88,60 @@ router.get('/:id/download', async (req, res) => {
     }
 
     // Check if file exists
-    const filePath = resultDataFormatted.file_path
+    const storedPath = resultDataFormatted.file_path
     const fileType = resultDataFormatted.file_type || ''
     const originalName = resultDataFormatted.original_filename || `file_${id}`
     
-    if (!filePath || !fs.existsSync(filePath)) {
-      return res.status(404).json({ success: false, message: 'File not found' })
+    // Resolve file path - always use uploads directory relative to current app
+    const uploadsDir = join(__dirname, '..', 'uploads')
+    
+    // Ensure uploads directory exists
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true })
+    }
+    
+    // Extract just the filename from the stored path (in case it's a full path)
+    const storedFilename = storedPath ? storedPath.split(/[/\\]/).pop() : null
+    const filePath = storedFilename ? join(uploadsDir, storedFilename) : null
+    
+    if (!filePath || !storedFilename || !fs.existsSync(filePath)) {
+      console.error('File not found:', {
+        storedPath: storedPath,
+        storedFilename: storedFilename,
+        filePath: filePath,
+        uploadsDir: uploadsDir,
+        exists: filePath ? fs.existsSync(filePath) : false
+      })
+      return res.status(404).json({ 
+        success: false, 
+        message: 'File not found. The uploaded file may have been removed or the path is incorrect.',
+        debug: { 
+          storedPath: storedPath, 
+          resolvedPath: filePath,
+          uploadsDir: uploadsDir
+        } 
+      })
     }
 
     // If the file is already a PDF, just send it as-is (renamed to original filename)
     if (fileType.includes('application/pdf')) {
       const fileContent = fs.readFileSync(filePath)
       const baseName = originalName.replace(/\.[^/.]+$/, '') // Remove extension
-      const filename = `${baseName}.pdf`
+      const pdfFilename = `${baseName}.pdf`
       
       res.setHeader('Content-Type', 'application/pdf')
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+      res.setHeader('Content-Disposition', `attachment; filename="${pdfFilename}"`)
       res.send(fileContent)
       return
     }
 
     // For other file types, convert to PDF with the same content
     const baseName = originalName.replace(/\.[^/.]+$/, '') // Remove extension
-    const filename = `${baseName}.pdf`
+    const pdfFilename = `${baseName}.pdf`
     
     // Set response headers
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+    res.setHeader('Content-Disposition', `attachment; filename="${pdfFilename}"`)
 
     // Read file content
     const fileContent = fs.readFileSync(filePath)
