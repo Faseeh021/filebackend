@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Upload as UploadIcon, File, Paperclip, CheckCircle2, AlertCircle } from 'lucide-react'
 import './Upload.css'
-import { api, wakeUpServer } from '../utils/api'
+import { api } from '../utils/api'
 
 const Upload = () => {
   const [files, setFiles] = useState([])
@@ -26,15 +26,7 @@ const Upload = () => {
           setErrorMessage('')
         } else {
           setServerStatus('offline')
-          setErrorMessage('Server is not available. Trying to wake it up...')
-          // Try to wake up the server
-          const woke = await wakeUpServer()
-          if (woke) {
-            setServerStatus('online')
-            setErrorMessage('')
-          } else {
-            setErrorMessage('Server is currently unavailable. Please try again in a moment.')
-          }
+          setErrorMessage('Server is not available. Please check your connection and try again.')
         }
       } catch (error) {
         setServerStatus('offline')
@@ -105,14 +97,8 @@ const Upload = () => {
 
     // Check server status before uploading
     if (serverStatus === 'offline') {
-      setErrorMessage('Server is not available. Trying to wake it up...')
-      const woke = await wakeUpServer()
-      if (!woke) {
-        alert('Server is currently unavailable. Please wait a moment and try again.')
-        return
-      }
-      setServerStatus('online')
-      setErrorMessage('')
+      alert('Server is currently unavailable. Please check your connection and try again.')
+      return
     }
 
     setUploading(true)
