@@ -20,7 +20,6 @@ const PORT = process.env.PORT || 5000
 
 // Middleware
 // CORS configuration - allow all origins for better compatibility
-// In production, Railway URLs can change, so we allow all origins
 // For better security, set CORS_ORIGIN env var with specific origins
 const corsOptions = {
   origin: process.env.CORS_ORIGIN 
@@ -41,7 +40,7 @@ app.use('/api/upload', uploadRoutes)
 app.use('/api/results', resultsRoutes)
 app.use('/api/requirements', requirementsRoutes)
 
-// Health check endpoint - also used to wake up sleeping services
+// Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
@@ -56,6 +55,15 @@ app.get('/', (req, res) => {
   res.json({ 
     status: 'ok', 
     message: 'File Management API is running',
+    timestamp: new Date().toISOString()
+  })
+})
+
+// Keep-alive endpoint - ping this regularly to prevent Railway sleep
+app.get('/api/keepalive', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    message: 'Server is alive',
     timestamp: new Date().toISOString()
   })
 })

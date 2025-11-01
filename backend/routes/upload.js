@@ -63,7 +63,7 @@ router.post('/', upload.single('file'), async (req, res) => {
       return res.status(400).json({ success: false, message: 'No file uploaded' })
     }
 
-    const { filename, originalname, path, size, mimetype } = req.file
+    const { filename, originalname, size, mimetype } = req.file
 
     // Store relative path (just filename) to avoid issues with absolute paths on different environments
     const relativePath = filename // Just the filename, stored in uploads directory

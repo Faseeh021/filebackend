@@ -173,8 +173,7 @@ router.get('/:id/download', async (req, res) => {
         message: 'File not found. The uploaded file may have been removed or the path is incorrect.',
         debug: { 
           storedPath: storedPath, 
-          resolvedPath: filePath,
-          uploadsDir: uploadsDir
+          resolvedPath: filePath
         } 
       })
     }
