@@ -40,7 +40,7 @@ const Dashboard = () => {
       <div className="dashboard-header">
         <div className="welcome-section">
           <h1 className="welcome-title">
-            Welcome to File Management System
+            Welcome to Li-ionBRCC
           </h1>
           <p className="welcome-subtitle">
             Upload, manage, and download your files
