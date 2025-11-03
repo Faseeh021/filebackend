@@ -1,5 +1,6 @@
-import { db, client } from './config.js'
-import { uploads, results, requirements } from './schema.js'
+import { getCollection } from './config.js'
+import { connectDB } from './config.js'
+import { COLLECTIONS } from './schema.js'
 
 const defaultRequirements = [
   'Maximum file size per upload is 20 MB.',
@@ -17,80 +18,30 @@ const defaultRequirements = [
   'All uploaded files can be downloaded in PDF format from the results page.',
 ]
 
-async function createTables() {
-  console.log('Creating database tables...')
-  
-  // Create uploads table
-  await client`
-    CREATE TABLE IF NOT EXISTS uploads (
-      id SERIAL PRIMARY KEY,
-      filename VARCHAR(255) NOT NULL,
-      original_filename VARCHAR(255) NOT NULL,
-      file_path VARCHAR(500) NOT NULL,
-      file_size INTEGER NOT NULL,
-      file_type VARCHAR(100),
-      uploaded_at TIMESTAMP DEFAULT NOW(),
-      user_id VARCHAR(100) DEFAULT 'default_user'
-    )
-  `
-  
-  // Create results table
-  await client`
-    CREATE TABLE IF NOT EXISTS results (
-      id SERIAL PRIMARY KEY,
-      upload_id INTEGER REFERENCES uploads(id) ON DELETE CASCADE,
-      configured BOOLEAN DEFAULT false,
-      issues_detected INTEGER DEFAULT 0,
-      report_path VARCHAR(500),
-      created_at TIMESTAMP DEFAULT NOW(),
-      updated_at TIMESTAMP DEFAULT NOW()
-    )
-  `
-  
-  // Create requirements table
-  await client`
-    CREATE TABLE IF NOT EXISTS requirements (
-      id SERIAL PRIMARY KEY,
-      description TEXT NOT NULL,
-      created_at TIMESTAMP DEFAULT NOW()
-    )
-  `
-  
-  console.log('✓ Database tables created successfully')
-}
-
 export async function initDB() {
   try {
-    console.log('Initializing database tables...')
+    console.log('Initializing database collections...')
     
-    // Check if tables exist by trying to query them
-    try {
-      const existingRequirements = await db.select().from(requirements).limit(1)
+    // Connect to database
+    await connectDB()
+    
+    // Get collections
+    const requirementsCollection = await getCollection(COLLECTIONS.REQUIREMENTS)
+    
+    // Check if default requirements exist
+    const existingRequirements = await requirementsCollection.countDocuments()
+    
+    if (existingRequirements === 0) {
+      console.log('Seeding default requirements...')
+      const requirementsToInsert = defaultRequirements.map((description) => ({
+        description,
+        createdAt: new Date(),
+      }))
       
-      if (existingRequirements.length === 0) {
-        console.log('Seeding default requirements...')
-        for (const description of defaultRequirements) {
-          await db.insert(requirements).values({ description })
-        }
-        console.log('Default requirements inserted')
-      } else {
-        console.log('Requirements already exist, skipping seed')
-      }
-    } catch (tableError) {
-      if (tableError.code === '42P01') {
-        console.log('Tables do not exist, creating them...')
-        // Tables don't exist, create them
-        await createTables()
-        
-        // Now seed default requirements
-        console.log('Seeding default requirements...')
-        for (const description of defaultRequirements) {
-          await db.insert(requirements).values({ description })
-        }
-        console.log('Default requirements inserted')
-      } else {
-        throw tableError
-      }
+      await requirementsCollection.insertMany(requirementsToInsert)
+      console.log('Default requirements inserted')
+    } else {
+      console.log('Requirements already exist, skipping seed')
     }
 
     console.log('Database initialized successfully')

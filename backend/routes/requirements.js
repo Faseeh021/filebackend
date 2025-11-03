@@ -1,30 +1,40 @@
 import express from 'express'
-import { db, client } from '../db/config.js'
-import { requirements } from '../db/schema.js'
-import { eq, asc, sql } from 'drizzle-orm'
+import { getCollection } from '../db/config.js'
+import { COLLECTIONS } from '../db/schema.js'
+import { ObjectId } from 'mongodb'
 
 const router = express.Router()
 
 // Get all requirements
 router.get('/', async (req, res) => {
   try {
-    // Use direct postgres client to bypass Drizzle schema mapping issues
-    const allRequirements = await client`
-      SELECT id, description, created_at as "createdAt"
-      FROM requirements
-      ORDER BY id ASC
-    `
+    let requirementsCollection
+    try {
+      requirementsCollection = await getCollection(COLLECTIONS.REQUIREMENTS)
+    } catch (dbError) {
+      console.error('Database connection error in requirements route:', dbError.message)
+      return res.status(503).json({ 
+        success: false, 
+        message: 'Database connection failed. Please check your MongoDB Atlas connection and try again.',
+        error: 'Database unavailable'
+      })
+    }
+    const allRequirements = await requirementsCollection
+      .find({})
+      .sort({ _id: 1 }) // Sort by MongoDB _id (ascending)
+      .toArray()
     
-    res.json({ success: true, requirements: allRequirements })
+    // Format response to match expected structure
+    const formattedRequirements = allRequirements.map((req) => ({
+      id: req._id.toString(),
+      description: req.description,
+      createdAt: req.createdAt,
+    }))
+    
+    res.json({ success: true, requirements: formattedRequirements })
   } catch (error) {
     console.error('Error fetching requirements:', error)
-    console.error('Error details:', {
-      code: error.code,
-      message: error.message,
-      severity: error.severity
-    })
-    
-    res.status(500).json({ success: false, message: 'Failed to fetch requirements', error: error.message, code: error.code })
+    res.status(500).json({ success: false, message: 'Failed to fetch requirements', error: error.message })
   }
 })
 
@@ -32,20 +42,26 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const result = await client`
-      SELECT id, description, created_at as "createdAt"
-      FROM requirements
-      WHERE id = ${parseInt(id)}
-      LIMIT 1
-    `
     
-    const requirement = result[0]
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid requirement ID' })
+    }
+    
+    const requirementsCollection = await getCollection(COLLECTIONS.REQUIREMENTS)
+    const requirement = await requirementsCollection.findOne({ _id: new ObjectId(id) })
 
     if (!requirement) {
       return res.status(404).json({ success: false, message: 'Requirement not found' })
     }
 
-    res.json({ success: true, requirement })
+    // Format response
+    const formattedRequirement = {
+      id: requirement._id.toString(),
+      description: requirement.description,
+      createdAt: requirement.createdAt,
+    }
+
+    res.json({ success: true, requirement: formattedRequirement })
   } catch (error) {
     console.error('Error fetching requirement:', error)
     res.status(500).json({ success: false, message: 'Failed to fetch requirement', error: error.message })
@@ -61,15 +77,23 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Description is required' })
     }
 
-    const result = await client`
-      INSERT INTO requirements (description)
-      VALUES (${description})
-      RETURNING id, description, created_at as "createdAt"
-    `
+    const requirementsCollection = await getCollection(COLLECTIONS.REQUIREMENTS)
+    const result = await requirementsCollection.insertOne({
+      description,
+      createdAt: new Date(),
+    })
     
-    const requirement = result[0]
+    // Fetch the created requirement
+    const requirement = await requirementsCollection.findOne({ _id: result.insertedId })
+    
+    // Format response
+    const formattedRequirement = {
+      id: requirement._id.toString(),
+      description: requirement.description,
+      createdAt: requirement.createdAt,
+    }
 
-    res.json({ success: true, requirement })
+    res.json({ success: true, requirement: formattedRequirement })
   } catch (error) {
     console.error('Error creating requirement:', error)
     res.status(500).json({ success: false, message: 'Failed to create requirement', error: error.message })
