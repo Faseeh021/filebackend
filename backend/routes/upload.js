@@ -3,8 +3,9 @@ import multer from 'multer'
 import { fileURLToPath } from 'url'
 import { dirname, join, extname } from 'path'
 import fs from 'fs'
-import { db, client } from '../db/config.js'
-import { uploads, results } from '../db/schema.js'
+import { getCollection } from '../db/config.js'
+import { COLLECTIONS } from '../db/schema.js'
+import { ObjectId } from 'mongodb'
 
 const router = express.Router()
 
@@ -68,28 +69,93 @@ router.post('/', upload.single('file'), async (req, res) => {
     // Store relative path (just filename) to avoid issues with absolute paths on different environments
     const relativePath = filename // Just the filename, stored in uploads directory
     
-    // Insert upload record into database using raw SQL
-    const [uploadRecord] = await client`
-      INSERT INTO uploads (filename, original_filename, file_path, file_size, file_type)
-      VALUES (${filename}, ${originalname}, ${relativePath}, ${size}, ${mimetype})
-      RETURNING id, filename, original_filename as "originalFilename", file_path as "filePath", 
-                 file_size as "fileSize", file_type as "fileType", uploaded_at as "uploadedAt", user_id as "userId"
-    `
+    // Insert upload record into database
+    let uploadsCollection, resultsCollection
+    try {
+      uploadsCollection = await getCollection(COLLECTIONS.UPLOADS)
+    } catch (dbError) {
+      console.error('Database connection error in upload route:', dbError.message)
+      return res.status(503).json({ 
+        success: false, 
+        message: 'Database connection failed. Please check your MongoDB Atlas connection and try again.',
+        error: 'Database unavailable'
+      })
+    }
+    
+    const uploadResult = await uploadsCollection.insertOne({
+      filename,
+      originalFilename: originalname,
+      filePath: relativePath,
+      fileSize: size,
+      fileType: mimetype,
+      uploadedAt: new Date(),
+      userId: 'default_user',
+    })
+
+    // Get the inserted upload
+    const uploadRecord = await uploadsCollection.findOne({ _id: uploadResult.insertedId })
 
     // Create a result entry for this upload
-    const issuesDetected = Math.floor(Math.random() * 5) // Mock: 0-4 issues
-    const [resultRecord] = await client`
-      INSERT INTO results (upload_id, issues_detected)
-      VALUES (${uploadRecord.id}, ${issuesDetected})
-      RETURNING id, upload_id as "uploadId", configured, issues_detected as "issuesDetected", 
-                 report_path as "reportPath", created_at as "createdAt", updated_at as "updatedAt"
-    `
+    // Determine violations based on filename pattern
+    // iteration1.png = 4 violations, iteration2.png = 0 violations
+    let issuesDetected = 0
+    if (originalname.toLowerCase().includes('iteration1')) {
+      issuesDetected = 4
+    } else if (originalname.toLowerCase().includes('iteration2')) {
+      issuesDetected = 0
+    } else {
+      // For other files, random 0-4 issues
+      issuesDetected = Math.floor(Math.random() * 5)
+    }
+    
+    try {
+      resultsCollection = await getCollection(COLLECTIONS.RESULTS)
+    } catch (dbError) {
+      console.error('Database connection error getting results collection:', dbError.message)
+      return res.status(503).json({ 
+        success: false, 
+        message: 'Database connection failed. Please check your MongoDB Atlas connection and try again.',
+        error: 'Database unavailable'
+      })
+    }
+    const resultResult = await resultsCollection.insertOne({
+      uploadId: uploadResult.insertedId,
+      configured: false,
+      issuesDetected,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+
+    // Get the inserted result
+    const resultRecord = await resultsCollection.findOne({ _id: resultResult.insertedId })
+
+    // Format response
+    const formattedUpload = {
+      id: uploadRecord._id.toString(),
+      filename: uploadRecord.filename,
+      originalFilename: uploadRecord.originalFilename,
+      filePath: uploadRecord.filePath,
+      fileSize: uploadRecord.fileSize,
+      fileType: uploadRecord.fileType,
+      uploadedAt: uploadRecord.uploadedAt,
+      userId: uploadRecord.userId,
+    }
+
+    const formattedResult = {
+      id: resultRecord._id.toString(),
+      uploadId: resultRecord.uploadId.toString(),
+      configured: resultRecord.configured,
+      issuesDetected: resultRecord.issuesDetected,
+      reportPath: resultRecord.reportPath,
+      createdAt: resultRecord.createdAt,
+      updatedAt: resultRecord.updatedAt,
+    }
 
     res.json({
       success: true,
       message: 'File uploaded successfully',
-      upload: uploadRecord,
-      result: resultRecord,
+      upload: formattedUpload,
+      result: formattedResult,
     })
   } catch (error) {
     console.error('Upload error:', error)

@@ -7,8 +7,7 @@ import uploadRoutes from './routes/upload.js'
 import resultsRoutes from './routes/results.js'
 import requirementsRoutes from './routes/requirements.js'
 import { initDB } from './db/init.js'
-import { migrate } from 'drizzle-orm/postgres-js/migrator'
-import { db } from './db/config.js'
+import { connectDB } from './db/config.js'
 
 dotenv.config()
 
@@ -31,7 +30,7 @@ if (corsOriginEnv) {
   console.log('📝 CORS_ORIGIN environment variable:', corsOriginEnv)
 } else {
   console.log('⚠️ CORS configured to allow all origins (CORS_ORIGIN not set)')
-  console.log('💡 Set CORS_ORIGIN environment variable in Railway to restrict origins')
+  console.log('💡 Set CORS_ORIGIN environment variable to restrict origins')
 }
 
 // Manual CORS headers middleware - Force correct CORS headers FIRST
@@ -128,7 +127,7 @@ app.get('/', (req, res) => {
   })
 })
 
-// Keep-alive endpoint - ping this regularly to prevent Railway sleep
+// Health check endpoint
 app.get('/api/keepalive', (req, res) => {
   res.json({ 
     status: 'ok', 
@@ -147,125 +146,35 @@ app.get('/api/debug/cors', (req, res) => {
   })
 })
 
-// Auto keep-alive service - uploads small file every 10 minutes to prevent Railway sleep
-async function setupKeepAlive() {
-  // Only run in production and if enabled
-  if (process.env.NODE_ENV === 'production' && process.env.DISABLE_KEEPALIVE !== 'true') {
-    const KEEPALIVE_INTERVAL = 10 * 60 * 1000 // 10 minutes in milliseconds
-    
-    const performKeepAlive = async () => {
-      try {
-        const fs = await import('fs')
-        const path = await import('path')
-        const FormData = (await import('form-data')).default
-        
-        // Create a small keep-alive file (~0.5KB)
-        // Fill with content to make it approximately 512 bytes
-        const keepAliveContent = 'Keep-alive file to prevent Railway service sleep. ' + 
-                                 'Generated at: ' + new Date().toISOString() + '. ' +
-                                 'This file is automatically uploaded every 10 minutes to keep the service active. ' +
-                                 'File size: ~512 bytes. '.repeat(3)
-        
-        const keepAliveDir = path.join(__dirname, 'uploads')
-        // Ensure uploads directory exists
-        if (!fs.existsSync(keepAliveDir)) {
-          fs.mkdirSync(keepAliveDir, { recursive: true })
-        }
-        
-        const keepAlivePath = path.join(keepAliveDir, `keep-alive-${Date.now()}.txt`)
-        fs.writeFileSync(keepAlivePath, keepAliveContent)
-        
-        // Prepare form data for upload
-        const formData = new FormData()
-        formData.append('file', fs.createReadStream(keepAlivePath), {
-          filename: `keep-alive-${Date.now()}.txt`,
-          contentType: 'text/plain'
-        })
-        
-        // Make internal request to upload endpoint
-        const response = await fetch(`http://localhost:${PORT}/api/upload`, {
-          method: 'POST',
-          body: formData,
-          headers: formData.getHeaders()
-        })
-        
-        const result = await response.json()
-        
-        // Clean up the temporary file
-        if (fs.existsSync(keepAlivePath)) {
-          try {
-            fs.unlinkSync(keepAlivePath)
-          } catch (unlinkError) {
-            // Ignore cleanup errors
-          }
-        }
-        
-        if (result.success) {
-          console.log(`✅ Keep-alive upload successful at ${new Date().toISOString()} (File ID: ${result.upload?.id})`)
-        } else {
-          console.warn(`⚠️ Keep-alive upload returned error: ${result.message || 'Unknown error'}`)
-        }
-      } catch (error) {
-        // Don't throw - keep-alive failures shouldn't crash the server
-        console.warn(`⚠️ Keep-alive upload failed (non-critical): ${error.message}`)
-      }
-    }
-    
-    // Start keep-alive immediately after server starts (wait 30 seconds for server to be ready)
-    setTimeout(() => {
-      console.log('🔄 Keep-alive service starting - will upload small file every 10 minutes')
-      performKeepAlive()
-    }, 30000) // Wait 30 seconds after server starts
-    
-    // Then run every 10 minutes
-    setInterval(performKeepAlive, KEEPALIVE_INTERVAL)
-  } else {
-    console.log('ℹ️ Keep-alive service disabled (NODE_ENV is not production or DISABLE_KEEPALIVE is set)')
-  }
-}
 
 // Initialize database on startup
 async function startServer() {
-  try {
-    // Try to run migrations if they exist, otherwise just initialize data
-    console.log('Checking database...')
+  // Start server first (even if DB fails)
+  app.listen(PORT, async () => {
+    console.log(`Server is running on port ${PORT}`)
+    
+    // Try to connect to database in background
     try {
-      const migrationsFolder = join(__dirname, 'drizzle')
-      const fs = await import('fs')
-      if (fs.existsSync(migrationsFolder)) {
-        console.log('Running database migrations...')
-        await migrate(db, { migrationsFolder })
-        console.log('Migrations completed successfully')
-      } else {
-        console.log('No migrations folder found, skipping migrations')
-      }
-    } catch (migrationError) {
-      console.warn('Migration warning:', migrationError.message)
-      console.log('Continuing with database initialization...')
+      console.log('Connecting to database...')
+      
+      // Connect to MongoDB
+      await connectDB()
+      
+      // Initialize data
+      await initDB()
+      console.log('Database initialized successfully')
+    } catch (error) {
+      console.error('⚠ Failed to initialize database:', error.message)
+      console.log('⚠ Server is running but database is not available')
+      console.log('\n📋 To fix database connection:')
+      console.log('1. Go to MongoDB Atlas: https://cloud.mongodb.com')
+      console.log('2. Navigate to Network Access (left sidebar)')
+      console.log('3. Click "Add IP Address"')
+      console.log('4. Select "Allow Access from Anywhere" (0.0.0.0/0)')
+      console.log('5. Wait 1-2 minutes for changes to take effect')
+      console.log('6. Restart the server')
     }
-    
-    // Initialize data
-    await initDB()
-    console.log('Database initialized successfully')
-    
-    // Start server
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`)
-      console.log(`Run 'npm run db:studio' to open Drizzle Studio`)
-      
-      // Start keep-alive service
-      setupKeepAlive()
-    })
-  } catch (error) {
-    console.error('Failed to initialize database:', error)
-    // Try to start server anyway
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT} (database may not be fully initialized)`)
-      
-      // Start keep-alive service
-      setupKeepAlive()
-    })
-  }
+  })
 }
 
 startServer()
