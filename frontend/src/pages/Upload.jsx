@@ -106,7 +106,7 @@ const Upload = () => {
     setErrorMessage('')
 
     try {
-      // Pre-flight health check to wake up Railway service if sleeping
+      // Pre-flight health check
       try {
         await api.healthCheck()
         console.log('Server health check passed')
@@ -150,7 +150,7 @@ const Upload = () => {
       
       // Handle timeout errors more gracefully
       if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-        errorMsg = 'Upload timeout: The server took too long to respond. This may happen if the Railway service is waking up from sleep. Please wait a moment and try again.'
+        errorMsg = 'Upload timeout: The server took too long to respond. Please check your connection and try again.'
       }
       
       setErrorMessage(errorMsg)
@@ -171,7 +171,7 @@ const Upload = () => {
         <div className="upload-section">
           <h1 className="page-title">Upload Files</h1>
               <p className="page-subtitle">
-                Upload your files to manage and download them.
+                Submit your cropped General Arrangement (GA) drawing or related documents to begin the compliance verification process.
               </p>
 
           <div className="upload-card">

@@ -35,6 +35,15 @@
   border-radius: 8px;
 }
 
+.logo-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.logo-link:hover {
+  opacity: 0.8;
+}
+
 .logo-text {
   font-family: 'Urbanist', sans-serif;
   font-weight: 600;

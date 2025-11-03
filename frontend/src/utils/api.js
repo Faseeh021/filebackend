@@ -111,8 +111,8 @@ const createApiInstance = async () => {
       if (error.code === 'ERR_NETWORK' || error.code === 'ERR_NAME_NOT_RESOLVED') {
         error.userMessage = 'Cannot connect to server. Please check your connection and try again.'
       } else if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
-        // Timeout error - likely Railway service is sleeping or slow
-        error.userMessage = 'Upload timeout: The server is taking too long to respond. This may happen if the service is waking up. Please try again.'
+        // Timeout error
+        error.userMessage = 'Upload timeout: The server is taking too long to respond. Please check your connection and try again.'
       } else if (error.response) {
         error.userMessage = error.response.data?.message || error.message
       } else {
@@ -145,7 +145,7 @@ export const api = {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
-      timeout: 120000, // 120 seconds (2 minutes) for uploads - accounts for Railway cold starts
+      timeout: 120000, // 120 seconds (2 minutes) for uploads
       onUploadProgress: onProgress,
     })
   },

@@ -107,6 +107,28 @@
   max-width: 120px;
 }
 
+.vessel-name-cell {
+  font-weight: 500;
+  color: #333;
+}
+
+.comply-cell {
+  font-weight: 500;
+}
+
+.comply-yes {
+  color: #10B981;
+}
+
+.comply-no {
+  color: #f44336;
+}
+
+.violations-cell {
+  color: #333;
+  font-weight: 500;
+}
+
 .issues-detected {
   color: #333;
   font-weight: 500;

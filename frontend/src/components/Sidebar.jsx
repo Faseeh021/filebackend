@@ -5,10 +5,10 @@ import './Sidebar.css'
 
 const Sidebar = ({ isOpen, currentPath }) => {
   const navItems = [
-    { path: '/', label: 'Overview Dashboard', icon: BarChart3 },
+    { path: '/', label: 'Home', icon: BarChart3 },
     { path: '/upload', label: 'Upload', icon: Upload },
     { path: '/results', label: 'Results', icon: CheckCircle },
-    { path: '/requirements', label: 'Guidelines', icon: FileText },
+    { path: '/requirements', label: 'Requirements', icon: FileText },
   ]
 
   const utilityItems = [
@@ -21,7 +21,9 @@ const Sidebar = ({ isOpen, currentPath }) => {
       <div className="sidebar-header">
         <div className="logo">
           <img src="/logo.jpg" alt="Logo" className="logo-icon" />
-          <span className="logo-text">File Management</span>
+          <a href="https://li-ionbrcc.com" target="_blank" rel="noopener noreferrer" className="logo-link">
+            <span className="logo-text">Li-ionBRCC</span>
+          </a>
         </div>
       </div>
 
@@ -59,8 +61,8 @@ const Sidebar = ({ isOpen, currentPath }) => {
         <div className="user-profile">
           <User className="user-avatar" size={20} />
           <div className="user-info">
-            <div className="user-name">John Doe</div>
-            <div className="user-email">john.doe@kubota.com</div>
+            <div className="user-name">Ivan</div>
+            <div className="user-email">2301572@sit.singaporetech.edu.sg</div>
           </div>
           <LogOut className="logout-icon" size={16} />
         </div>

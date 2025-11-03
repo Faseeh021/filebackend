@@ -73,12 +73,35 @@
   color: #333;
 }
 
-.col-no {
-  width: 80px;
-  text-align: center;
+.col-sn {
+  width: 120px;
+  text-align: left;
   font-weight: 500;
+  color: #333;
 }
 
 .col-description {
   width: auto;
+  line-height: 1.6;
+}
+
+.col-reference {
+  width: 250px;
+  text-align: left;
+  font-size: 13px;
+  color: #666;
+  font-style: italic;
+}
+
+.requirements-footer {
+  padding: 24px;
+  background-color: #f9f9f9;
+  border-top: 1px solid #e0e0e0;
+  font-size: 13px;
+  color: #666;
+  line-height: 1.8;
+}
+
+.requirements-footer p {
+  margin: 8px 0;
 }

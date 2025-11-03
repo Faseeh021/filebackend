@@ -40,10 +40,10 @@ const Dashboard = () => {
       <div className="dashboard-header">
         <div className="welcome-section">
           <h1 className="welcome-title">
-            Welcome to File Management System
+            Home
           </h1>
           <p className="welcome-subtitle">
-            Upload, manage, and download your files
+            Perform automated compliance checks for Lithium-ion battery room arrangements. Upload, validate, and download compliance reports instantly.
           </p>
         </div>
         <div>
